@@ -13,3 +13,4 @@ Code suggestions from [the kOS design patterns page](http://ksp-kos.github.io/KO
 + `WHEN condition THEN` are expected to complete inside a single physics tick, so don't wait in them, or do major looping in them
 + Never put an `UNTIL condition` inside of a `WHEN condition THEN`
 + Avoid having tons of conditions being checked at the same time; one way to do this is to next `WHEN condition THEN` statements inside of each other as much as possible
++ `WHEN` triggers don't fire if the program has ended! The program ends if there are no more waits.

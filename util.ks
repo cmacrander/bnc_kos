@@ -9,6 +9,7 @@ function util_get_staged_engines {
     // You can't just say `for eng in ENGINES`, you have to store
     // it in a "real" variable first... because... kOS is kinda
     // dumb that way? I dunno.
+    local engs to list().
     list ENGINES in engs.
     for eng in engs {
         if eng:STAGE = STAGE:NUMBER {

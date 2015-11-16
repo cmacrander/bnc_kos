@@ -98,19 +98,20 @@ function util_relative_warp {
     wait until TIME:SECONDS >= warp_target.
 }
 
-// Turns on SAS and waits until rotation on all three axes is under 0.05 deg/s.
+// Turns on SAS and waits until rotation on all three axes is under 0.01 deg/s.
 // Restores SAS state to what it was before the function ran.
 function util_stabilize {
     print "Stabilizing the ship...".
-    lock THROTTLE to 0.
 
+    lock THROTTLE to 0.
+    unlock STEERING.
     local original_sas_state to SAS.
     local original_sasmode to SASMODE.
     SAS on.
     set SASMODE to "stabilityassist".
 
     local wait_duration to 0.1.
-    local fudge to 0.05.  // degree change per wait duration allowable
+    local fudge to 0.01.  // degree change per wait duration allowable
     local start to TIME:SECONDS.
 
     local prev_facing to SHIP:FACING.
@@ -130,5 +131,6 @@ function util_stabilize {
 
     set SAS to original_sas_state.
     set SASMODE to original_sasmode.
+    unlock THROTTLE.
 }
 

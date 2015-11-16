@@ -54,3 +54,69 @@ function util_move_all_solar_panels {
         }
     }
 }
+
+// Native `warpto()` goes to an absolute time and doesn't block execution.
+// This warps forward some seconds, and waits until the warp is done.
+function util_relative_warp {
+    parameter sec.
+
+    if (sec < 0) {
+        print "ERROR (util_relative_warp): Can't warp negative seconds.".
+        return.
+    }
+
+    local warp_target to TIME:SECONDS + sec.
+    warpto(warp_target).
+    wait until TIME:SECONDS >= warp_target.
+}
+
+function sum {
+    parameter li.
+
+    local s to 0.
+    for e in li {
+        set s to s + e.
+    }
+
+    return s.
+}
+
+function mean {
+    parameter li.
+
+    return sum(li) / li:LENGTH.
+}
+
+// Turns on SAS and waits until rotation on all three axes is under 0.01 deg/s.
+// Restores SAS state to what it was before the function ran.
+function util_stabilize {
+    print "Stabilizing the ship...".
+    lock THROTTLE to 0.
+
+    local original_sas_state to SAS.
+    SAS on.
+    set SASMODE to "stabilityassist".
+
+    local wait_duration to 0.01.
+    local fudge to 0.001.  // degree change per wait duration allowable
+    local start to TIME:SECONDS.
+
+    local prev_facing to SHIP:FACING.
+    wait wait_duration.
+    local d_pitch to SHIP:FACING:PITCH - prev_facing:PITCH.
+    local d_yaw to SHIP:FACING:YAW - prev_facing:YAW.
+    local d_roll to SHIP:FACING:ROLL - prev_facing:ROLL.
+    local ticks to 0.
+    until abs(d_pitch) < fudge and abs(d_yaw) < fudge and abs(d_roll) < fudge {
+        set prev_facing to SHIP:FACING.
+        wait wait_duration.
+        set d_pitch to SHIP:FACING:PITCH - prev_facing:PITCH.
+        set d_yaw to SHIP:FACING:YAW - prev_facing:YAW.
+        set d_roll to SHIP:FACING:ROLL - prev_facing:ROLL.
+    }
+    print "Took " + (round(TIME:SECONDS - start, 2)) + "s to stabilize to < " +
+          (round(fudge / wait_duration, 3)) + " deg/s.".
+
+    set SAS to original_sas_state.
+}
+

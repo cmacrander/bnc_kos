@@ -17,15 +17,13 @@ function orbit_alter_apsis {
     parameter apsis.  // "periapsis" or "apoapsis"
     parameter target.  // meters
 
-    logtxt("==== orbit_alter_apsis ====").
-    logtxt("apsis: " + apsis).
-    logtxt("target: " + target).
+    // Initialize //
 
     // Function will deem orbit acceptable if within  this many meters of the
     // target.
     local fudge_factor to target * 0.01.  // 1% of target
 
-    // Operate on the difference between the target and the current altitude.
+    // Calculations that vary based on selection of one apsis or the other.
     local diff to 0.
     local my_eta to 0.
     if (apsis = "apoapsis") {
@@ -36,8 +34,6 @@ function orbit_alter_apsis {
         lock my_eta to ETA:APOAPSIS.
     }
 
-    logtxt("diff: " + diff).
-
     // Sanity check ship's readiness for burn before starting anything.
     local current_engines to util_get_staged_engines().
     if (current_engines:LENGTH = 0) {
@@ -45,8 +41,13 @@ function orbit_alter_apsis {
         return.
     }
 
+    // Warp to burn //
+
     util_relative_warp(my_eta - 15).
 
+    // Align //
+
+    SAS off.  // SAS on + lock STEERING = CRAZY TIME
     if (abs(diff) < fudge_factor) {
         print "Altitude already satisfactory. No burn planned.".
         return.
@@ -60,6 +61,8 @@ function orbit_alter_apsis {
 
     wait until my_eta < 1.
 
+    // Burn //
+
     print "Burning to " + (target / 1000) + "km...".
     lock THROTTLE to 1.
 
@@ -70,8 +73,6 @@ function orbit_alter_apsis {
     local target_ma to major_axis + diff.
     local current_diff to 0.
 
-    logtxt("target_ma: " + target_ma).
-
     // Standarize the sign of the difference.
     if (diff >= 0) {
         lock current_diff to target_ma - major_axis.
@@ -79,15 +80,12 @@ function orbit_alter_apsis {
         lock current_diff to major_axis - target_ma.
     }
 
-    // Burn until the difference to the target sma is gone.
-    //wait until current_diff <= 0.
-    until current_diff <= 0 {
-        logtxt(current_diff).
-        wait 0.1.
-    }
+    // Burn until the difference to the target major axis is gone.
+    wait until current_diff <= 0.
 
     print "Desired orbit reached.".
     lock THROTTLE to 0.
+    set SHIP:CONTROL:PILOTMAINTHROTTLE to 0.
 }
 
 
@@ -97,6 +95,3 @@ parameter tar.
 clearscreen.
 clear_log().
 orbit_alter_apsis(aps, tar * 1000).
-util_stabilize().
-util_relative_warp(100).
-

@@ -118,7 +118,6 @@ function util_stabilize {
     local d_pitch to SHIP:FACING:PITCH - prev_facing:PITCH.
     local d_yaw to SHIP:FACING:YAW - prev_facing:YAW.
     local d_roll to SHIP:FACING:ROLL - prev_facing:ROLL.
-    local ticks to 0.
     until abs(d_pitch) < fudge and abs(d_yaw) < fudge and abs(d_roll) < fudge {
         set prev_facing to SHIP:FACING.
         wait wait_duration.

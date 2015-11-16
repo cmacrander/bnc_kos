@@ -2,6 +2,34 @@
 
 @lazyglobal off.
 
+function logtxt {
+    parameter txt.
+    log txt to "log.txt".
+}
+
+function clear_log {
+    log "" to "log.txt".  // to make sure it exists
+    delete "log.txt".  // to clear it
+    log "" to "log.txt".  // to re-create it so it's there when you look for it
+}
+
+function sum {
+    parameter li.
+
+    local s to 0.
+    for e in li {
+        set s to s + e.
+    }
+
+    return s.
+}
+
+function mean {
+    parameter li.
+
+    return sum(li) / li:LENGTH.
+}
+
 // Get all the engines that are part of the current stage.
 
 function util_get_staged_engines {
@@ -70,35 +98,19 @@ function util_relative_warp {
     wait until TIME:SECONDS >= warp_target.
 }
 
-function sum {
-    parameter li.
-
-    local s to 0.
-    for e in li {
-        set s to s + e.
-    }
-
-    return s.
-}
-
-function mean {
-    parameter li.
-
-    return sum(li) / li:LENGTH.
-}
-
-// Turns on SAS and waits until rotation on all three axes is under 0.01 deg/s.
+// Turns on SAS and waits until rotation on all three axes is under 0.05 deg/s.
 // Restores SAS state to what it was before the function ran.
 function util_stabilize {
     print "Stabilizing the ship...".
     lock THROTTLE to 0.
 
     local original_sas_state to SAS.
+    local original_sasmode to SASMODE.
     SAS on.
     set SASMODE to "stabilityassist".
 
-    local wait_duration to 0.01.
-    local fudge to 0.001.  // degree change per wait duration allowable
+    local wait_duration to 0.1.
+    local fudge to 0.05.  // degree change per wait duration allowable
     local start to TIME:SECONDS.
 
     local prev_facing to SHIP:FACING.
@@ -118,5 +130,6 @@ function util_stabilize {
           (round(fudge / wait_duration, 3)) + " deg/s.".
 
     set SAS to original_sas_state.
+    set SASMODE to original_sasmode.
 }
 

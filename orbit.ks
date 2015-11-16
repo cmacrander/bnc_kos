@@ -6,73 +6,97 @@
 
 run util.
 
-parameter ap.
-
-// A very primitive set of actions to raise one's apoapsis.
+// Change either one's apoapsis or periapsis.
 // Needed improvements:
 // * Non-insane steering
 // * Some way of calculating lead-up time, probably by:
 //   - calculating delta v of the transition
 //   - comparing that to ship's TWR
 // * Smooth throttle up and down
-// * Generality so we can raise/lower both Ap and Pe
-function orbit_alter_ap {
-    parameter target_ap.
+function orbit_alter_apsis {
+    parameter apsis.  // "periapsis" or "apoapsis"
+    parameter target.  // meters
 
-    // Function will seem orbit acceptable if within  this many meters of the
+    logtxt("==== orbit_alter_apsis ====").
+    logtxt("apsis: " + apsis).
+    logtxt("target: " + target).
+
+    // Function will deem orbit acceptable if within  this many meters of the
     // target.
-    local fudge_factor to target_ap * 0.01.  // 1% of target
+    local fudge_factor to target * 0.01.  // 1% of target
 
-    // Operate on the difference between the target
-    // ap and the current ap.
-    lock ap_diff to target_ap - SHIP:APOAPSIS.
-
-    // Keep track of which sign ap_diff has initially, to protect from
-    // overshooting.
-    // N.B. Important to declare locally outside of the if/else, because in
-    // kOS, if/else blocks have their own scope, in which the variable would
-    // otherwise be trapped.
-    local diff_sign to "".
-    if (ap_diff >= 0) {
-        set diff_sign to "positive".
-    } else {
-        set diff_sign to "negative".
+    // Operate on the difference between the target and the current altitude.
+    local diff to 0.
+    local my_eta to 0.
+    if (apsis = "apoapsis") {
+        set diff to target - SHIP:APOAPSIS.
+        lock my_eta to ETA:PERIAPSIS.  // Don't use 'eta', it's reserved!
+    } else if (apsis = "periapsis") {
+        set diff to target - SHIP:PERIAPSIS.
+        lock my_eta to ETA:APOAPSIS.
     }
 
-    local current_engines to util_get_staged_engines().
+    logtxt("diff: " + diff).
 
+    // Sanity check ship's readiness for burn before starting anything.
+    local current_engines to util_get_staged_engines().
     if (current_engines:LENGTH = 0) {
         print "ERROR (orbit_raise_ap): No engines found.".
         return.
     }
 
-    warpto(TIME:SECONDS + ETA:PERIAPSIS - 15).
-    //wait until ETA:PERIAPSIS < 15.
+    util_relative_warp(my_eta - 15).
 
-    if (abs(ap_diff) < fudge_factor) {
-        print "Ap already satisfactory. No burn planned.".
-    } else if (ap_diff > 0) {
-        print "RAISING Ap, steering to prograde.".
+    if (abs(diff) < fudge_factor) {
+        print "Altitude already satisfactory. No burn planned.".
+        return.
+    } else if (diff > 0) {
+        print "RAISING apsis, steering to prograde.".
         lock STEERING to SHIP:PROGRADE.
-    } else if (ap_diff < 0) {
-        print "LOWERING Ap, steering to retrograde.".
+    } else if (diff < 0) {
+        print "LOWERING apsis, steering to retrograde.".
         lock STEERING to SHIP:RETROGRADE.
     }
 
-    wait until ETA:PERIAPSIS < 1.
+    wait until my_eta < 1.
 
-    print "Burning to " + (target_ap / 1000) + "km...".
+    print "Burning to " + (target / 1000) + "km...".
     lock THROTTLE to 1.
-    until abs(ap_diff) < fudge_factor {
-        // Add a failsafe, so if we overshoot the fudge factor within 1
-        // physics tick, we don't keep burning past the target.
-        if (diff_sign = "positive" and ap_diff < 0) {
-            break.
-        } else if (diff_sign = "negative" and ap_diff > 0) {
-            break.
-        }
+
+    // Define the end of the burn based on the major axis, not apoapsis or
+    // periapsis height, because the location of those can flip as you raise
+    // or lower their height "through" the height of the other.
+    local lock major_axis to (SHIP:ORBIT:SEMIMAJORAXIS * 2).
+    local target_ma to major_axis + diff.
+    local current_diff to 0.
+
+    logtxt("target_ma: " + target_ma).
+
+    // Standarize the sign of the difference.
+    if (diff >= 0) {
+        lock current_diff to target_ma - major_axis.
+    } else {
+        lock current_diff to major_axis - target_ma.
+    }
+
+    // Burn until the difference to the target sma is gone.
+    //wait until current_diff <= 0.
+    until current_diff <= 0 {
+        logtxt(current_diff).
+        wait 0.1.
     }
 
     print "Desired orbit reached.".
     lock THROTTLE to 0.
 }
+
+
+parameter aps.
+parameter tar.
+
+clearscreen.
+clear_log().
+orbit_alter_apsis(aps, tar * 1000).
+util_stabilize().
+util_relative_warp(100).
+

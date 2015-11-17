@@ -36,17 +36,19 @@ function orbit_simple_burn_time {
 }
 
 // Change either one's apoapsis or periapsis.
+//
+// Takes an align time because it seems really unlikely the computer could
+// predict how nimble (or cement-trucky, or wet-noodly) your craft is.
 function orbit_alter_apsis {
     parameter apsis.  // "periapsis" or "apoapsis"
     parameter target_altitude.  // meters
+    parameter align_time.  // seconds
 
     // Initialize //
 
     // Function will deem current orbit acceptable and skip the requested
     // maneuver if within this many meters of the target.
     local already_good_enough to target_altitude * 0.01.  // 1% of target
-
-    local align_time to 15.
 
     // Calculations that vary based on selection of one apsis or the other.
     local apsis_eta to 0.
@@ -138,9 +140,9 @@ function orbit_alter_apsis {
     util_stabilize().
 }
 
-
-parameter aps.
-parameter tar.
-clearscreen.
-clear_log().
-orbit_alter_apsis(aps, tar * 1000).
+// Example of using alter apsis. Uncomment to use orbit.ks as a function.
+//parameter aps.
+//parameter tar.
+//clearscreen.
+//clear_log().
+//orbit_alter_apsis(aps, tar * 1000, 20).

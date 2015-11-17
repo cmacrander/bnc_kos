@@ -5,6 +5,10 @@
 //                                    //
 ////////////////////////////////////////
 
+////// IMPORTS //////
+
+run orbit.
+
 ////// EXPECTED PARAMETERS //////
 // desired_orbit: the desired orbit height in km
 
@@ -84,56 +88,19 @@ when ALTITUDE > turn_start then {
 
 ////// CIRCULARIZATION //////
 
-when APOAPSIS > desired_orbit then {
+wait until APOAPSIS > desired_orbit.
 
-  // Turn off throttle
-  lock THROTTLE to 0.
+print "----".
+print "Desired Apoapsis reached, circularizing.".
 
-  print "----".
-  print desired_orbit/1000 + "km apoapsis achieved, cutting engines".
-
-  // Calculate additional orbital speed needed
-  // TODO: this calculation isn't quite right, the extra dV is too small
-  set additional_delta_v to orbit_speed - VELOCITY:ORBIT:MAG.
-
-  print "----".
-  print "Current orbital speed: " + round(VELOCITY:ORBIT:MAG, 0) + "m/s".
-  print "Desired orbital speed: " + round(orbit_speed, 0) + "m/s".
-  print "Necessary deltaV increase: " + round(additional_delta_v, 0) + "m/s".
-
-  // Create a maneuver node to circularize
-  set orbit_maneuver to node(TIME:SECONDS + ETA:APOAPSIS, 0, 0, additional_delta_v).
-  add orbit_maneuver.
-
-  print "Maneuver will achieve ...".
-  print "   Apoapsis: " + round(orbit_maneuver:ORBIT:APOAPSIS/1000, 1) + "km apoapsis".
-  print "   Periapsis: " + round(orbit_maneuver:ORBIT:PERIAPSIS/1000, 1) + "km periapsis".
-
-  // Lock steering to maneuver point
-  unlock STEERING.
-  set SASMODE to "maneuver".
-
-  // TODO: Not sure how to determine the expected burn time, then use that for timing this burn
-  // Tragically, I think I might need to calculate expected acceleration from thrust and
-  // mass and fuel flow (i.e. reduction in mass) and all that crap.
-  when orbit_maneuver:ETA < 30 then {
-    lock THROTTLE to 1.
-
-    print "----".
-    print "30s to apoapsis, circularizing orbit".
-  }
-}
+lock THROTTLE to 0.
+unlock STEERING.
+SAS on.
+set SASMODE to "stabilityassist".
+local align_time to 20.
+orbit_alter_apsis("periapsis", desired_orbit, align_time).
 
 ////// END PROGRAM //////
-
-when (APOAPSIS * 0.95) > desired_orbit and (PERIAPSIS * 0.95) > desired_orbit then {
-  remove orbit_maneuver.
-  lock THROTTLE to 0.
-  set SHIP:CONTROL:PILOTMAINTHROTTLE to 0.
-
-  print "----".
-  print desired_orbit/1000 + "km orbit achieved, cutting throttle".
-}
 
 until (APOAPSIS * 0.95) > desired_orbit and (PERIAPSIS * 0.95) > desired_orbit {
   print "Pitch Angle: " + round(pitch_angle, 1) at (0,25).

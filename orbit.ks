@@ -26,9 +26,9 @@ function orbit_dv_for_apsis_change {
     return termA * (termB - termC).
 }
 
-// Assumes no change in thrust during the burn, for example from staging
-// or atmospheric pressure.
-function orbit_burn_time {
+// Assumes no change in thrust during the burn, for example from staging,
+// atmospheric pressure, or fuel consumption.
+function orbit_simple_burn_time {
     parameter dv.
 
     local acc to SHIP:MAXTHRUST / SHIP:MASS.
@@ -42,9 +42,9 @@ function orbit_alter_apsis {
 
     // Initialize //
 
-    // Function will deem orbit acceptable if within this many meters of the
-    // target.
-    local fudge_factor to target_altitude * 0.01.  // 1% of target
+    // Function will deem current orbit acceptable and skip the requested
+    // maneuver if within this many meters of the target.
+    local already_good_enough to target_altitude * 0.01.  // 1% of target
 
     local align_time to 15.
 
@@ -70,7 +70,7 @@ function orbit_alter_apsis {
         return.
     }
 
-    if (abs(target_altitude - original_altitude) < fudge_factor) {
+    if (abs(target_altitude - original_altitude) < already_good_enough) {
         print "Altitude already satisfactory. No burn planned.".
         return.
     }
@@ -81,7 +81,7 @@ function orbit_alter_apsis {
                                           target_altitude).
     local maneuv to node(TIME:SECONDS + apsis_eta, 0, 0, dv).
     add maneuv.
-    local burn_time to orbit_burn_time(dv).
+    local burn_time to orbit_simple_burn_time(dv).
 
     // Warp to burn //
 
@@ -104,7 +104,27 @@ function orbit_alter_apsis {
     print "Burning to " + (target_altitude / 1000) + "km...".
     lock THROTTLE to 1.
 
-    wait until maneuv:ETA <= (-burn_time / 2).
+    //   During the burn, the remaining delta v in the maneuver is the
+    // magnitude of the burn vector. It would be most accurate to reduce this
+    // to zero.
+    //   Another strategy is using orbit_simple_burn_time(), but that's based
+    // on the mass of the ship at the beginning of the burn, and burning fuel
+    // reduces mass, so the time will always be too long, with bigger errors
+    // for long burns.
+    //   Just using dv is fiddly though, because if your alignment isn't
+    // perfect you might never reach zero, i.e. shoot past the target vector
+    // but never _through_ it.
+    //   So this tries the dv method, but uses the overly-long burn time as
+    // a fail-safe.
+
+    // The goal for this parameter is to get precise maneuvers on really long
+    // burns, so for a 1000 m/s burn, try to get down to 1 m/s. Trying to hit
+    // 0.01 m/s on a 10 m/s burn is obviously unrealistic, but that's what
+    // the failsafe is for.
+    local maneuver_precision to 0.001.
+
+    wait until (maneuv:BURNVECTOR:MAG < dv * maneuver_precision  // precise
+                or maneuv:ETA <= (-burn_time / 2)).  // failsafe
 
     print "Desired orbit reached.".
     lock THROTTLE to 0.

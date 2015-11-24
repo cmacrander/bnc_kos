@@ -5,6 +5,8 @@
 //                                    //
 ////////////////////////////////////////
 
+@lazyglobal off.
+
 ////// IMPORTS //////
 
 run orbit.
@@ -13,12 +15,14 @@ run orbit.
 // desired_orbit: the desired orbit height in km
 
 parameter desired_orbit.
-set desired_orbit to desired_orbit*1000.
+parameter inclination.
+
+local desired_orbit to desired_orbit*1000.
 
 ////// CONFIGURATION //////
 // turn_start: altitude to begin gravity turn in m
 
-set turn_start to 500.
+local turn_start to 500.
 
 ////// USEFUL CALCULATIONS //////
 
@@ -29,7 +33,7 @@ lock pitch_angle to 90 - 90 * (APOAPSIS / desired_orbit).
 
 // Calculate the speed of the desired orbit
 // see http://wiki.kerbalspaceprogram.com/wiki/Tutorial:_Basic_Orbiting_(Math)
-set orbit_speed to 600000 * sqrt(9.807 / (600000 + desired_orbit)).
+local orbit_speed to 600000 * sqrt(9.807 / (600000 + desired_orbit)).
 
 ////// COUNTDOWN //////
 
@@ -44,15 +48,15 @@ from {local countdown is 3.} until countdown = 0 step {set countdown to countdow
 ////// LAUNCH //////
 
 lock THROTTLE to 1.
-lock STEERING to heading(90, 90). // straight up
+lock STEERING to heading(inclination, 90). // straight up
 SAS on.
 set SASMODE to "stabilityassist".
 stage.
 
 ////// STAGING //////
 
-set stage_time to 0.
-set activate_stage_wait to false.
+local stage_time to 0.
+local activate_stage_wait to false.
 
 // When you run out of fuel, lock the steering to the current
 // heading and record the time
@@ -62,7 +66,11 @@ when MAXTHRUST = 0 then {
   set activate_stage_wait to true.
 
   print "----".
-  print "Stage exhuasted, waiting 2 seconds".
+  if (STAGE:NUMBER = 0) {
+    print "Stage exhausted. No more stages!".
+  } else {
+    print "Stage exhausted, waiting 2 seconds".
+  }
 }
 
 // Three seconds after running out of fuel activate the next stage,
@@ -70,7 +78,7 @@ when MAXTHRUST = 0 then {
 when activate_stage_wait and TIME:SECONDS > (stage_time + 2) then {
   // TODO: this is cheating, I don't how to dynamically record the
   // previous state and then go back to it here
-  lock STEERING to heading(90, pitch_angle).
+  lock STEERING to heading(inclination, pitch_angle).
   stage.
 
   print "----".
@@ -80,7 +88,7 @@ when activate_stage_wait and TIME:SECONDS > (stage_time + 2) then {
 ////// ASCENT //////
 
 when ALTITUDE > turn_start then {
-  lock STEERING to heading(90, pitch_angle).
+  lock STEERING to heading(inclination, pitch_angle).
 
   print "----".
   print "Reached " + turn_start + "m, starting turn".

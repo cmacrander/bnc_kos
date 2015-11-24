@@ -126,8 +126,9 @@ function util_stabilize {
         set d_yaw to SHIP:FACING:YAW - prev_facing:YAW.
         set d_roll to SHIP:FACING:ROLL - prev_facing:ROLL.
     }
-    print "Took " + (round(TIME:SECONDS - start, 2)) + "s to stabilize to < " +
-          (round(fudge / wait_duration, 3)) + " deg/s.".
+    print "...took " + (round(TIME:SECONDS - start, 2)) +
+          "s to stabilize to < " + (round(fudge / wait_duration, 3)) +
+          " deg/s.".
 
     set SAS to original_sas_state.
     set SASMODE to original_sasmode.

@@ -15,3 +15,11 @@ Code suggestions from [the kOS design patterns page](http://ksp-kos.github.io/KO
 + Avoid having tons of conditions being checked at the same time; one way to do this is to next `WHEN condition THEN` statements inside of each other as much as possible
 + `WHEN` triggers don't fire if the program has ended! The program ends if there are no more waits.
 + Beware the combination of `lock STEERING` and SAS. These are independent inputs to the controls and they fight each other. So if you leave steering locked on some vector, and then turn on stability assist, your craft will act like it's insane. To fix this, remove the undesirable input, either `unlock STEERING.` or `SAS off.`.
+
+### File Management Notes
+
++ Chris foolishly named a file "orbit.ks", but `ORBIT` is a reserved global, which causes all kinds of confusion when executing `RUN orbit` or `COPY orbit TO 1`. This file should be renamed, and similar collisions should be avoided.
++ Chris writes excessively verbose code, and his files maxed out the probe's storage.
+    - You can use minify_ks.py to do a little bit of space saving. It works a whole lot better than `COMPILE`.
+    - But you have to `RENAME` all the minified files back to their original names once they're on your craft's CPU or else the imports won't work.
+    - This is generally super annoying.

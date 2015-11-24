@@ -39,6 +39,8 @@ function orbit_simple_burn_time {
 //
 // Takes an align time because it seems really unlikely the computer could
 // predict how nimble (or cement-trucky, or wet-noodly) your craft is.
+//
+// Assumes your craft is ready for time warp, engines off, etc.
 function orbit_alter_apsis {
     parameter apsis.  // "periapsis" or "apoapsis"
     parameter target_altitude.  // meters
@@ -68,7 +70,7 @@ function orbit_alter_apsis {
 
     local current_engines to util_get_staged_engines().
     if (current_engines:LENGTH = 0) {
-        print "ERROR (orbit_maneuver_apsis): No engines found.".
+        print "ERROR (orbit_alter_apsis): No engines found.".
         return.
     }
 
@@ -89,7 +91,7 @@ function orbit_alter_apsis {
 
     local warp_sec to (maneuv:ETA - (burn_time / 2)) - align_time.
     if (maneuv:ETA < warp_sec) {
-        print "ERROR (orbit_maneuver_apsis): Not enough time to burn.".
+        print "ERROR (orbit_alter_apsis): Not enough time to burn.".
         return.
     }
     util_relative_warp(warp_sec).
@@ -103,7 +105,7 @@ function orbit_alter_apsis {
 
     // Burn //
 
-    print "Burning to " + (target_altitude / 1000) + "km...".
+    print "Burning to " + apsis + " of " + (target_altitude / 1000) + "km...".
     lock THROTTLE to 1.
 
     //   During the burn, the remaining delta v in the maneuver is the
@@ -128,7 +130,7 @@ function orbit_alter_apsis {
     wait until (maneuv:BURNVECTOR:MAG < dv * maneuver_precision  // precise
                 or maneuv:ETA <= (-burn_time / 2)).  // failsafe
 
-    print "Desired orbit reached.".
+    print "...Desired orbit reached.".
     lock THROTTLE to 0.
 
     // Cleanup //
